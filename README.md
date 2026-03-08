@@ -1,4 +1,4 @@
-# 🎤 Bootleggers Karaoke
+# 🎤 Gore Karaoke
 
 > *"We should totally just build our own karaoke system., with blackjack, and hookers!"*
 > — someone on their third cocktail at Bootleggers

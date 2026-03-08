@@ -1,10 +1,10 @@
 @echo off
-title Bootleggers Karaoke
+title Gore Karaoke
 color 0A
 
 echo.
 echo  ============================================
-echo    Bootleggers Karaoke ^| Starting up...
+echo    Gore Karaoke ^| Starting up...
 echo  ============================================
 echo.
 

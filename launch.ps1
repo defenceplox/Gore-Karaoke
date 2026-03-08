@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
-# launch.ps1 — Bootleggers Karaoke launcher (PowerShell version)
+# launch.ps1 - Gore Karaoke launcher (PowerShell version)
 # Also handles optional Windows cert store import for a warning-free host browser.
 
 $ErrorActionPreference = 'Stop'
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor Cyan
-Write-Host "    Bootleggers Karaoke | Starting up..."      -ForegroundColor Cyan
+Write-Host "    Gore Karaoke | Starting up..."             -ForegroundColor Cyan
 Write-Host "  ============================================" -ForegroundColor Cyan
 Write-Host ""
 

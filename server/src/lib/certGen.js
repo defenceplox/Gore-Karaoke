@@ -48,8 +48,8 @@ function generateCA() {
   cert.validity.notAfter.setFullYear(now.getFullYear() + CA_VALID_YEARS);
 
   const attrs = [
-    { name: 'commonName',         value: 'Bootleggers Karaoke Local CA' },
-    { name: 'organizationName',   value: 'Bootleggers Karaoke'          },
+    { name: 'commonName',         value: 'Gore Karaoke Local CA' },
+    { name: 'organizationName',   value: 'Gore Karaoke'          },
     { name: 'organizationalUnitName', value: 'Party Infrastructure'     },
   ];
   cert.setSubject(attrs);
@@ -79,7 +79,7 @@ function generateServerCert(caKeys, caCert, lanIPs) {
   cert.validity.notAfter  = new Date(now);
   cert.validity.notAfter.setFullYear(now.getFullYear() + CERT_VALID_YEARS);
 
-  cert.setSubject([{ name: 'commonName', value: 'Bootleggers Karaoke' }]);
+  cert.setSubject([{ name: 'commonName', value: 'Gore Karaoke' }]);
   cert.setIssuer(caCert.subject.attributes);
 
   const altNames = [
