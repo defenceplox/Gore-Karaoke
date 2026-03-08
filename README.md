@@ -172,7 +172,7 @@ If it saved you from buying an overpriced karaoke subscription, or just made you
 
 ## 📜 License
 
-MIT — because this was built for fun, at a bar, and should stay that way.
+GPL — because this was built for fun, at a bar, and should stay that way.
 
 ---
 
