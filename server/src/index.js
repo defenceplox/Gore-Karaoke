@@ -11,6 +11,7 @@ import { ExpressPeerServer } from 'peer';
 import { initDb } from './db/database.js';
 import { startCleanup } from './lib/cleanup.js';
 import { registerSocketHandlers } from './socket/handlers.js';
+import { ensureCerts } from './lib/certGen.js';
 import songsRouter from './routes/songs.js';
 import queueRouter from './routes/queue.js';
 import sessionsRouter from './routes/sessions.js';
@@ -22,8 +23,12 @@ const PORT = process.env.PORT || 3000;
 // Resolve cert paths relative to the server/ directory so they work
 // regardless of which directory pnpm/node is invoked from.
 const _serverRoot = path.resolve(__dirname, '..');
-const CERT_PATH = process.env.CERT_PATH ? path.resolve(_serverRoot, process.env.CERT_PATH) : null;
-const KEY_PATH  = process.env.KEY_PATH  ? path.resolve(_serverRoot, process.env.KEY_PATH)  : null;
+const CERT_PATH    = path.resolve(_serverRoot, process.env.CERT_PATH    || '../certs/server.pem');
+const KEY_PATH     = path.resolve(_serverRoot, process.env.KEY_PATH     || '../certs/server-key.pem');
+const CA_CERT_PATH = path.resolve(_serverRoot, process.env.CA_CERT_PATH || '../certs/rootCA.pem');
+
+// Auto-generate self-signed certs if missing (replaces mkcert requirement)
+ensureCerts(CERT_PATH, KEY_PATH, CA_CERT_PATH);
 
 // ── Express app ─────────────────────────────────────────────────────────────
 const app = express();
@@ -42,15 +47,13 @@ const songsDir = path.join(__dirname, '../public/songs');
 fs.mkdirSync(songsDir, { recursive: true });
 app.use('/songs', express.static(songsDir));
 
-// Serve mkcert root CA for easy phone trust installation (dev only)
-const caCertPath = path.join(__dirname, '../../certs/rootCA.pem');
-if (process.env.NODE_ENV !== 'production' && fs.existsSync(caCertPath)) {
+// Serve root CA cert so phones can install it and trust HTTPS / WebRTC
+if (fs.existsSync(CA_CERT_PATH)) {
   app.get('/rootCA.pem', (req, res) => {
     res.setHeader('Content-Type', 'application/x-pem-file');
     res.setHeader('Content-Disposition', 'attachment; filename="rootCA.pem"');
-    res.sendFile(caCertPath);
+    res.sendFile(CA_CERT_PATH);
   });
-  console.log('📲 CA cert available at /rootCA.pem (install on phone to trust HTTPS)');
 }
 
 // API routes
@@ -80,7 +83,7 @@ app.get('/', (req, res) => {
 
 // ── HTTP(S) server ───────────────────────────────────────────────────────────
 let server;
-const hasCerts = CERT_PATH && KEY_PATH && fs.existsSync(CERT_PATH) && fs.existsSync(KEY_PATH);
+const hasCerts = fs.existsSync(CERT_PATH) && fs.existsSync(KEY_PATH);
 
 if (hasCerts) {
   server = https.createServer(
@@ -90,7 +93,7 @@ if (hasCerts) {
   console.log('🔒 HTTPS enabled (certs found)');
 } else {
   server = http.createServer(app);
-  console.warn('⚠️  HTTP only — mic access requires HTTPS. Run scripts/gen-certs.sh to generate dev certs.');
+  console.warn('⚠️  HTTP only — cert generation failed. Check write permissions on the certs/ directory.');
 }
 
 // ── Socket.io ────────────────────────────────────────────────────────────────

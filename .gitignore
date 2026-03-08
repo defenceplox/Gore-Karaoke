@@ -27,3 +27,11 @@ Thumbs.db
 # Editor
 .vscode/settings.json
 *.swp
+
+# Internal dev notes (kept locally, not for public repo)
+CHECKPOINT.md
+TODO.md
+
+# Docker (not needed for Windows launcher)
+Dockerfile
+docker-compose.yml

@@ -1,6 +1,6 @@
 # 🎤 Bootleggers Karaoke
 
-> *"We should totally just build our own karaoke system."*
+> *"We should totally just build our own karaoke system., with blackjack, and hookers!"*
 > — someone on their third cocktail at Bootleggers
 
 And so it began. What started as a completely reasonable idea floated over drinks at **Bootleggers** evolved into a full-stack, LAN-hosted, WebRTC-powered karaoke machine that runs off a Windows box plugged into the TV. No monthly subscription. No bloated tablet app. No fighting with a DJ for the remote. Just vibes, bad singing, and questionable song choices.
@@ -22,7 +22,7 @@ We are not proud. We are also not sorry.
 A self-hosted karaoke system that runs entirely on your local network:
 
 - **TV (Display)** — The big screen. Shows the video, CDG graphics, lyrics overlay, queue bar, and a stage visualizer when nobody's singing. Scans a QR code to let phones join.
-- **Phone (Mobile)** — PWA that guests install from a QR code. Search YouTube for karaoke tracks, add songs to the queue, vote, reorder, and even use your phone as a wireless mic.
+- **Phone (Mobile)** — PWA that guests install from a QR code. Search YouTube for karaoke tracks, add songs to the queue, vote, reorder, and even use your phone as a wireless mic (WIP).
 - **Server** — Express + Socket.io backend running HTTPS locally. Handles sessions, queue management, YouTube search, yt-dlp fallback for embed-blocked videos, LRCLIB lyrics, and CDG+MP3 upload.
 
 ---
@@ -35,7 +35,7 @@ A self-hosted karaoke system that runs entirely on your local network:
 | Display | React + Vite, cdgraphics, Web Audio API, Canvas |
 | Mobile | React + Vite, PWA, WebRTC (PeerJS) |
 | Package mgr | pnpm workspaces |
-| Certs | mkcert (local CA for HTTPS + WebRTC on LAN) |
+| Certs | node-forge (auto-generated local CA — no external tools) |
 
 ---
 
@@ -46,8 +46,9 @@ A self-hosted karaoke system that runs entirely on your local network:
 - Node.js v18+
 - pnpm v9+
 - Python 3.12 + Visual Studio Build Tools (for `better-sqlite3` native addon)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) on your PATH
-- [mkcert](https://github.com/FiloSottile/mkcert) for HTTPS certs
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) on your PATH — `winget install yt-dlp.yt-dlp`
+
+> **No cert tool needed.** The server auto-generates a local CA + HTTPS cert on first boot using `node-forge`. No `mkcert`, no OpenSSL, no admin rights on the host.
 
 ### Setup
 
@@ -56,22 +57,26 @@ A self-hosted karaoke system that runs entirely on your local network:
 git clone <your-repo-url>
 cd karaoke2
 
-# 2. Generate local HTTPS certs (required for WebRTC phone mics)
-cd certs
-mkcert localhost 192.168.0.55   # replace with your LAN IP
-mkcert -install                  # installs local CA
-cd ..
-
-# 3. Copy rootCA.pem for Android (optional but nice)
-cp "$(mkcert -CAROOT)/rootCA.pem" certs/rootCA.pem
-
-# 4. Install dependencies
+# 2. Install dependencies
 pnpm install
 
-# 5. Set up your .env (see .env.example)
-cp server/.env.example server/.env
+# 3. Set up your .env (see .env.example)
+copy server\.env.example server\.env
+```
 
-# 6. Fire it up
+**Windows quick-start** (handles everything automatically):
+```bat
+launch.bat
+```
+or in PowerShell:
+```powershell
+.\launch.ps1
+```
+
+The launcher checks for Node/pnpm/yt-dlp, installs deps, builds the React clients if needed, and starts the server. Certs are generated on first run — no extra steps.
+
+**Manual start** (dev mode with hot reload):
+```bash
 pnpm dev
 ```
 
@@ -79,10 +84,12 @@ pnpm dev
 
 | Client | URL |
 |--------|-----|
-| Display (TV) | `https://localhost:3001/display/` |
-| Mobile (phones) | `https://192.168.0.55:3002/remote/` |
+| Display (TV) | `https://localhost:3000/display/` |
+| Mobile (phones) | `https://<your-lan-ip>:3000/remote/` |
 | Server API | `https://localhost:3000/api/` |
-| Install Android CA | Visit `https://192.168.0.55:3000/rootCA.pem` on the phone |
+| Install phone CA | `https://<your-lan-ip>:3000/rootCA.pem` — open on device, install the cert |
+
+The server logs your exact LAN URLs on startup, including the `/rootCA.pem` install link for each detected network interface.
 
 ---
 
@@ -120,10 +127,29 @@ karaoke2/
 
 ## ⚠️ Known Limitations
 
-- Firefox on Windows doesn't play nice with mkcert. Use Chrome or Edge.
-- `better-sqlite3` requires native build tools on Windows. If `pnpm install` explodes, make sure you have Python 3.12 + VS Build Tools installed.
-- yt-dlp must be on your system PATH. Install via `winget install yt-dlp.yt-dlp`.
-- WebRTC phone mics only work over HTTPS. If you skip the cert setup, PeerJS is disabled automatically.
+- **Host browser cert warning** — On first run, Chrome/Edge will warn about the self-signed cert. Click *Advanced → Proceed*. To permanently silence it, import `certs/rootCA.pem` into Windows via `certmgr.msc → Trusted Root Certification Authorities → Import` (or uncomment the relevant lines in `launch.ps1`, which does it automatically with admin rights).
+- **Phones** — Visit `https://<lan-ip>:3000/rootCA.pem` on the device and install the CA profile. The server logs the exact link on startup.
+- **`better-sqlite3`** requires native build tools on Windows. If `pnpm install` fails, install [Python 3.12](https://python.org) and [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022).
+- **yt-dlp** must be on your system PATH: `winget install yt-dlp.yt-dlp`
+- **WebRTC phone mics** only work over HTTPS. The server falls back to HTTP if cert generation fails (check write permissions on the `certs/` directory).
+
+---
+
+## 📦 Running It
+
+Double-click `launch.bat` or run `launch.ps1` in PowerShell. That's it.
+
+The launcher checks for Node.js and pnpm, installs dependencies on first run, builds the React clients if needed, and starts the server. Certs are generated automatically — no extra steps.
+
+```bat
+launch.bat
+```
+
+```powershell
+.\launch.ps1
+```
+
+> **Tip:** `launch.ps1` has a commented block near the bottom that imports the CA cert into the Windows trust store (requires running as Administrator), which permanently silences the browser cert warning on the host machine.
 
 ---
 
@@ -141,4 +167,4 @@ MIT — because this was built for fun, at a bar, and should stay that way.
 
 ---
 
-*Built with love, pnpm, and an inadvisable number of gin & tonics. 🎶*
+*Built with love, pnpm, and an inadvisable number of Long Island Ice Teas. 🎶*
