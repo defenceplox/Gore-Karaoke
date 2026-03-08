@@ -18,7 +18,8 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
   const [currentMs,   setCurrentMs]  = useState(0);
   const [countdown,   setCountdown]  = useState(false);
   const [mics,        setMics]       = useState([]);
-  const hasTouched = useRef(false);
+  const hasTouched       = useRef(false);
+  const pendingPlaying   = useRef(null); // song waiting behind countdown
 
   // Join session and subscribe to events
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
       setQueue(q);
       preCacheQueue(q);
       if (np) {
+        pendingPlaying.current = np;
         setCountdown(true);
       } else {
         setNowPlaying(null);
@@ -51,11 +53,11 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
 
   const handleCountdownDone = useCallback(() => {
     setCountdown(false);
-    // Fetch the now-playing state fresh
-    emit('session:join', { pin }, (resp) => {
-      if (resp?.nowPlaying) setNowPlaying(resp.nowPlaying);
-    });
-  }, [emit, pin]);
+    if (pendingPlaying.current) {
+      setNowPlaying(pendingPlaying.current);
+      pendingPlaying.current = null;
+    }
+  }, []);
 
   // Resume WebAudio context on first user gesture
   const handleFirstTouch = () => {

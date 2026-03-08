@@ -20,15 +20,8 @@ router.get('/search', async (req, res) => {
     }
 
     if (source === 'all' || source === 'youtube') {
-      if (!process.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY === 'YOUR_YOUTUBE_API_KEY_HERE') {
-        if (source === 'youtube') {
-          return res.status(503).json({ error: 'YouTube API key not configured' });
-        }
-        // Silently skip YouTube if key not set when source=all
-      } else {
-        const yt = await searchYouTube(query);
-        results.push(...yt);
-      }
+      const yt = await searchYouTube(query);
+      results.push(...yt);
     }
 
     res.json({ ok: true, results });

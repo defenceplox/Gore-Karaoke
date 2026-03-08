@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import https from 'https';
+
+const devAgent = new https.Agent({ rejectUnauthorized: false });
 
 export default defineConfig({
   plugins: [
@@ -23,14 +26,15 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api':    { target: 'https://localhost:3000', secure: false, changeOrigin: true },
-      '/peerjs': { target: 'https://localhost:3000', secure: false, changeOrigin: true },
-      '/songs':  { target: 'https://localhost:3000', secure: false, changeOrigin: true },
+      '/api':    { target: 'https://localhost:3000', secure: false, changeOrigin: true, agent: devAgent },
+      '/peerjs': { target: 'https://localhost:3000', secure: false, changeOrigin: true, agent: devAgent },
+      '/songs':  { target: 'https://localhost:3000', secure: false, changeOrigin: true, agent: devAgent },
       '/socket.io': {
         target:      'https://localhost:3000',
         ws:          true,
         secure:      false,
         changeOrigin: true,
+        agent:       devAgent,
       },
     },
   },
