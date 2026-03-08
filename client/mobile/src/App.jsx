@@ -76,13 +76,19 @@ export default function App() {
           />
         )}
         {activeTab === 'mic' && (
-          <MicPage
-            pin={pin}
-            singerName={singerName}
-            nowPlaying={nowPlaying}
-            emit={emit}
-            on={on}
-          />
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 12, padding: 32, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 48, filter: 'grayscale(1)', opacity: 0.4 }}>🎤</div>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16, margin: 0, fontWeight: 600 }}>
+              Phone Mic — Coming Soon
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13, margin: 0, maxWidth: 260 }}>
+              WebRTC microphone support is still in development.
+            </p>
+          </div>
         )}
         {activeTab === 'upload' && (
           <UploadPage pin={pin} />

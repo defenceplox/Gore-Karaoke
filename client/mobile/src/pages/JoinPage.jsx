@@ -2,7 +2,9 @@ import { useState } from 'react';
 import theme from '../theme.js';
 
 export default function JoinPage({ onJoin }) {
-  const [pin,      setPin]      = useState('');
+  // Pre-fill PIN from URL query param (set by QR code scan)
+  const urlPin = new URLSearchParams(window.location.search).get('pin') || '';
+  const [pin,      setPin]      = useState(urlPin);
   const [name,     setName]     = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');

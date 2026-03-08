@@ -9,7 +9,8 @@ export default function IdleScreen({ pin, queueLength, onStart }) {
     ? '192.168.0.55'
     : window.location.hostname;
   const serverPort = isDev ? '3002' : '3000';
-  const remoteUrl = `${window.location.protocol}//${serverHost}:${serverPort}/remote`;
+  // Trailing slash required — Vite base is /remote/ and redirects without it
+  const remoteUrl = `${window.location.protocol}//${serverHost}:${serverPort}/remote/`;
 
   return (
     <div style={styles.root} onClick={queueLength > 0 ? onStart : undefined}>

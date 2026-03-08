@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import StageVisualizer from './StageVisualizer.jsx';
 
 /**
  * YTFallbackPlayer
  * Used when YouTube IFrame API refuses to embed a video (error 101/150).
- * Fetches a direct audio stream URL via yt-dlp on the server and plays
- * it with a plain <audio> element.
- *
- * Note: audio plays through the browser's normal output path rather than
- * the Web Audio mixer — mic channels are unaffected.
+ * Points an <audio> element at /api/songs/ytproxy which pipes the yt-dlp
+ * stream through the Express server — avoids CORS and YouTube CDN 403s.
  */
 export default function YTFallbackPlayer({ videoId, onEnded, onTimeUpdate, onError }) {
-  const audioRef  = useRef(null);
-  const [status, setStatus] = useState('loading'); // loading | playing | error
+  const audioRef = useRef(null);
+  const [status,   setStatus]   = useState('loading'); // loading | playing | error
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
@@ -19,43 +17,30 @@ export default function YTFallbackPlayer({ videoId, onEnded, onTimeUpdate, onErr
     setStatus('loading');
     setErrorMsg('');
 
-    let cancelled = false;
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    fetch(`/api/songs/ytstream?videoId=${videoId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (cancelled) return;
-        if (!data.ok) throw new Error(data.error || 'Stream fetch failed');
+    // Point directly at the proxy URL — no pre-fetch needed.
+    // The server calls yt-dlp, caches the CDN URL, and pipes audio through.
+    audio.src = `/api/songs/ytproxy?videoId=${videoId}`;
+    audio.volume = 1;
 
-        const audio = audioRef.current;
-        if (!audio) return;
-        audio.src    = data.url;
-        audio.volume = 1;
-        audio.play().then(() => {
-          if (!cancelled) setStatus('playing');
-        }).catch(playErr => {
-          if (!cancelled) {
-            setStatus('error');
-            setErrorMsg(playErr.message);
-            onError?.(playErr.message);
-          }
-        });
-      })
-      .catch(err => {
-        if (!cancelled) {
-          setStatus('error');
-          setErrorMsg(err.message);
-          onError?.(err.message);
-        }
+    const onCanPlay = () => {
+      setStatus('playing');
+      audio.play().catch(err => {
+        setStatus('error');
+        setErrorMsg(err.message);
+        onError?.(err.message);
       });
+    };
+
+    audio.addEventListener('canplay', onCanPlay);
+    audio.load();
 
     return () => {
-      cancelled = true;
-      clearInterval(tickRef.current);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
+      audio.removeEventListener('canplay', onCanPlay);
+      audio.pause();
+      audio.src = '';
     };
   }, [videoId]);
 
@@ -69,7 +54,10 @@ export default function YTFallbackPlayer({ videoId, onEnded, onTimeUpdate, onErr
 
   return (
     <>
-      {/* Hidden audio element — audio plays through browser output */}
+      {/* Animated stage visuals — shown once audio is playing */}
+      {status === 'playing' && <StageVisualizer audioRef={audioRef} />}
+
+      {/* Hidden audio element — audio plays through browser output */}}
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}

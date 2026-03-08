@@ -23,6 +23,10 @@ export default function QueuePage({ pin, queue, nowPlaying, emit }) {
     emit('playback:skip', {});
   }, [emit]);
 
+  const nudgeLyrics = useCallback((delta) => {
+    emit('lyrics:offset', { delta });
+  }, [emit]);
+
   // ── Drag-to-reorder via pointer events ──────────────────────────
   const dragState = useRef(null); // { id, startY, startIndex, itemHeight }
 
@@ -70,8 +74,19 @@ export default function QueuePage({ pin, queue, nowPlaying, emit }) {
     setLocalQueue(null);
   }, [emit, localQueue]);
 
+  const startQueue = useCallback(() => {
+    emit('playback:next', {});
+  }, [emit]);
+
   return (
     <div style={styles.page}>
+      {/* Start button — shown when idle with songs queued */}
+      {!nowPlaying && displayQueue.length > 0 && (
+        <button style={styles.startBtn} onClick={startQueue}>
+          ▶ Start Queue
+        </button>
+      )}
+
       {/* Now Playing */}
       {nowPlaying && (
         <div style={styles.nowPlaying}>
@@ -82,6 +97,11 @@ export default function QueuePage({ pin, queue, nowPlaying, emit }) {
             <span style={{ color: theme.colors.textMuted }}>  ·  {nowPlaying.singer_name}</span>
           </div>
           <button style={styles.skipBtn} onClick={skip}>Skip ⏭</button>
+          <div style={styles.lyricsRow}>
+            <span style={styles.lyricsLabel}>Lyrics timing</span>
+            <button style={styles.nudgeBtn} onClick={() => nudgeLyrics(-250)}>◀ Earlier</button>
+            <button style={styles.nudgeBtn} onClick={() => nudgeLyrics(+250)}>Later ▶</button>
+          </div>
         </div>
       )}
 
@@ -157,6 +177,18 @@ const styles = {
     flexDirection: 'column',
     gap:           10,
   },
+  startBtn: {
+    width:        '100%',
+    padding:      '14px',
+    background:   theme.colors.primary,
+    color:        '#fff',
+    border:       'none',
+    borderRadius: theme.radii.md,
+    fontSize:     17,
+    fontWeight:   700,
+    cursor:       'pointer',
+    letterSpacing: '0.03em',
+  },
   nowPlaying: {
     background:   `linear-gradient(135deg, ${theme.colors.secondary}, ${theme.colors.bgCard})`,
     border:       `1px solid ${theme.colors.primary}44`,
@@ -182,6 +214,26 @@ const styles = {
     border:       `1px solid ${theme.colors.border}`,
     borderRadius: theme.radii.pill,
     fontSize:     14,
+    cursor:       'pointer',
+  },
+  lyricsRow: {
+    display:     'flex',
+    alignItems:  'center',
+    gap:         8,
+    marginTop:   10,
+  },
+  lyricsLabel: {
+    fontSize:   12,
+    color:      theme.colors.textMuted,
+    flexShrink: 0,
+  },
+  nudgeBtn: {
+    padding:      '6px 12px',
+    background:   'rgba(255,255,255,0.06)',
+    color:        '#fff',
+    border:       `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radii.pill,
+    fontSize:     13,
     cursor:       'pointer',
   },
   empty: {

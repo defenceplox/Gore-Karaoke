@@ -1,6 +1,13 @@
 import { useState, useCallback } from 'react';
 import theme from '../theme.js';
 
+function formatViews(n) {
+  if (!n) return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M views`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K views`;
+  return `${n} views`;
+}
+
 export default function SearchPage({ pin, singerName, emit, onAdd }) {
   const [query,   setQuery]   = useState('');
   const [results, setResults] = useState([]);
@@ -78,12 +85,17 @@ export default function SearchPage({ pin, singerName, emit, onAdd }) {
               <div style={styles.cardText}>
                 <div style={styles.songTitle}>{song.songTitle}</div>
                 <div style={styles.artistName}>{song.artistName}</div>
-                <span style={{
-                  ...styles.badge,
-                  background: song.source === 'youtube' ? '#c41' : '#0a5',
-                }}>
-                  {song.source === 'youtube' ? 'YouTube' : 'CDG'}
-                </span>
+                <div style={styles.metaRow}>
+                  <span style={{
+                    ...styles.badge,
+                    background: song.source === 'youtube' ? '#c41' : '#0a5',
+                  }}>
+                    {song.source === 'youtube' ? 'YouTube' : 'CDG'}
+                  </span>
+                  {song.views > 0 && (
+                    <span style={styles.views}>👁 {formatViews(song.views)}</span>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -177,6 +189,7 @@ const styles = {
   },
   cardText: {
     overflow: 'hidden',
+    flex: 1,
   },
   songTitle: {
     color:        '#fff',
@@ -192,6 +205,16 @@ const styles = {
     overflow:     'hidden',
     textOverflow: 'ellipsis',
     whiteSpace:   'nowrap',
+  },
+  metaRow: {
+    display:    'flex',
+    alignItems: 'center',
+    gap:        6,
+    marginTop:  3,
+  },
+  views: {
+    fontSize: 10,
+    color:    theme.colors.textMuted,
   },
   badge: {
     display:      'inline-block',

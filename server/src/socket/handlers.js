@@ -91,6 +91,13 @@ export function registerSocketHandlers(io) {
       socket.to(sessionId).emit('playback:tick', { currentTime, duration });
     });
 
+    // Nudge lyrics timing from any client in the session
+    socket.on('lyrics:offset', ({ delta }) => {
+      const { sessionId } = socket.data;
+      if (!sessionId || typeof delta !== 'number') return;
+      socket.to(sessionId).emit('lyrics:offset', { delta });
+    });
+
     socket.on('playback:ended', (_, ack) => {
       const { sessionId } = socket.data;
       if (!sessionId) { ack?.({ error: 'Not in a session' }); return; }

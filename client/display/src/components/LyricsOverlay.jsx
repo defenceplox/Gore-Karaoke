@@ -43,6 +43,34 @@ export function parseUltraStarLyrics(txt) {
 }
 
 /**
+ * Parses LRC format (line-level timestamps from LRCLIB).
+ * "[mm:ss.xx]Line text" → array of {startMs, endMs, syllable}
+ * Each LRC line is treated as a single syllable (no word-level timing in
+ * standard LRC, so the whole line highlights when it starts).
+ */
+export function parseLrcLyrics(lrc) {
+  const lineRe = /^\[(\d{1,3}):(\d{2}\.\d{1,3})\](.*)$/;
+  const entries = [];
+
+  for (const raw of lrc.split('\n')) {
+    const m = raw.trim().match(lineRe);
+    if (!m) continue;
+    const ms = (parseInt(m[1]) * 60 + parseFloat(m[2])) * 1000;
+    const text = m[3].trim();
+    if (text) entries.push({ ms, text });
+  }
+
+  // Convert to {startMs, endMs, syllable} — endMs = next line's startMs
+  return entries.map((e, i) => ({
+    startMs:   e.ms,
+    endMs:     entries[i + 1]?.ms ?? e.ms + 5000,
+    syllable:  e.text,
+    golden:    false,
+    lineBreak: true,  // each LRC entry is already a complete display line
+  }));
+}
+
+/**
  * LyricsOverlay
  * Renders two lines of karaoke lyrics (current + next) with syllable-level
  * highlighting based on the current playback time.
@@ -50,8 +78,15 @@ export function parseUltraStarLyrics(txt) {
 export default function LyricsOverlay({ lyricsData, currentTimeMs }) {
   const notes = useMemo(() => {
     if (!lyricsData) return [];
-    if (typeof lyricsData === 'string') return parseUltraStarLyrics(lyricsData);
-    return lyricsData; // already parsed
+    if (Array.isArray(lyricsData)) return lyricsData; // already parsed
+    if (typeof lyricsData === 'string') {
+      // Auto-detect format by presence of LRC timestamp pattern
+      if (/^\[\d{1,3}:\d{2}\./.test(lyricsData.trim())) {
+        return parseLrcLyrics(lyricsData);
+      }
+      return parseUltraStarLyrics(lyricsData);
+    }
+    return [];
   }, [lyricsData]);
 
   // Group notes into display lines (split at large time gaps or line-break markers)
@@ -63,8 +98,8 @@ export default function LyricsOverlay({ lyricsData, currentTimeMs }) {
     for (let i = 0; i < notes.length; i++) {
       current.push(notes[i]);
       const next = notes[i + 1];
-      // Start a new line if gap > 1s between syllables
-      if (!next || next.startMs - notes[i].endMs > 1000) {
+      // Start a new line if: LRC line-break flag, or gap > 1s between syllables
+      if (!next || notes[i].lineBreak || next.startMs - notes[i].endMs > 1000) {
         groups.push(current);
         current = [];
       }
@@ -111,34 +146,40 @@ export default function LyricsOverlay({ lyricsData, currentTimeMs }) {
 
   return (
     <div style={{
-      position:   'absolute',
-      bottom:     80,
-      left:       0,
-      right:      0,
-      padding:    '0 40px',
-      textAlign:  'center',
-      pointerEvents: 'none',
+      position:       'absolute',
+      top:            0,
+      bottom:         0,
+      left:           0,
+      right:          0,
+      padding:        '0 48px',
+      display:        'flex',
+      flexDirection:  'column',
+      alignItems:     'center',
+      justifyContent: 'center',
+      pointerEvents:  'none',
     }}>
       {/* Current line */}
       <div style={{
-        fontSize:   'clamp(28px, 5vw, 56px)',
-        lineHeight: 1.3,
+        fontSize:      'clamp(28px, 5vw, 56px)',
+        lineHeight:    1.3,
         letterSpacing: '0.02em',
-        marginBottom: 8,
-        fontFamily: theme.fonts.display,
-        textShadow: '2px 2px 8px rgba(0,0,0,0.8)',
+        marginBottom:  8,
+        fontFamily:    theme.fonts.display,
+        textShadow:    '2px 2px 8px rgba(0,0,0,0.8)',
+        textAlign:     'center',
       }}>
         {currentLine ? renderLine(currentLine, true) : null}
       </div>
 
       {/* Next line (dimmed) */}
       <div style={{
-        fontSize:   'clamp(20px, 3.5vw, 40px)',
-        lineHeight: 1.3,
+        fontSize:      'clamp(20px, 3.5vw, 40px)',
+        lineHeight:    1.3,
         letterSpacing: '0.02em',
-        fontFamily: theme.fonts.display,
-        opacity:    0.5,
-        textShadow: '1px 1px 4px rgba(0,0,0,0.8)',
+        fontFamily:    theme.fonts.display,
+        opacity:       0.5,
+        textShadow:    '1px 1px 4px rgba(0,0,0,0.8)',
+        textAlign:     'center',
       }}>
         {nextLine ? renderLine(nextLine, false) : null}
       </div>

@@ -122,6 +122,14 @@ if (hasCerts) {
 initDb();
 startCleanup();
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Kill the old process and try again.`);
+    process.exit(1);
+  }
+  throw err;
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   const protocol = hasCerts ? 'https' : 'http';
   console.log(`\n🎤 Karaoke server running on ${protocol}://localhost:${PORT}`);

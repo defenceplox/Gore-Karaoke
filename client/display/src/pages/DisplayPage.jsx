@@ -10,6 +10,7 @@ import QueueBar         from '../components/QueueBar.jsx';
 import Countdown        from '../components/Countdown.jsx';
 import NowPlayingBanner from '../components/NowPlayingBanner.jsx';
 import MicManager       from '../components/MicManager.jsx';
+import MicControls      from '../components/MicControls.jsx';
 import IdleScreen       from '../components/IdleScreen.jsx';
 import theme            from '../theme.js';
 
@@ -19,10 +20,31 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
   const [currentMs,   setCurrentMs]  = useState(0);
   const [countdown,   setCountdown]  = useState(false);
   const [mics,        setMics]       = useState([]);
-  const [ytError,     setYtError]    = useState(null);
-  const [ytFallback,   setYtFallback]  = useState(false);
+  const [ytError,       setYtError]       = useState(null);
+  const [ytFallback,    setYtFallback]    = useState(false);
+  const [fallbackLyrics, setFallbackLyrics] = useState(null);
+  const [lyricsStatus,  setLyricsStatus]  = useState(null); // null|loading|found|not_found
+  const [lyricsOffset,  setLyricsOffset]  = useState(0);   // ms, adjusted with [ / ] keys
   const hasTouched       = useRef(false);
   const pendingPlaying   = useRef(null); // song waiting behind countdown
+
+  // [ / ] keys nudge lyrics timing by ±250 ms
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === '[') setLyricsOffset(o => o - 250);
+      if (e.key === ']') setLyricsOffset(o => o + 250);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Remote lyrics:offset nudge from phone
+  useEffect(() => {
+    const unsub = on('lyrics:offset', ({ delta }) => {
+      setLyricsOffset(o => o + delta);
+    });
+    return unsub;
+  }, [on]);
 
   // Join session and subscribe to events
   useEffect(() => {
@@ -35,6 +57,9 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
       preCacheQueue(q);
       setYtFallback(false);
       setYtError(null);
+      setFallbackLyrics(null);
+      setLyricsOffset(0);
+      setLyricsStatus(null);
       if (np) {
         pendingPlaying.current = np;
         setCountdown(true);
@@ -49,6 +74,8 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
     if (nowPlaying) evictSong(nowPlaying);
     setYtFallback(false);
     setYtError(null);
+    setFallbackLyrics(null);
+    setLyricsStatus(null);
     emit('playback:ended', {});
   }, [emit, nowPlaying]);
 
@@ -56,7 +83,26 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
     // Try yt-dlp fallback before giving up
     setYtError(`Embedded blocked — trying yt-dlp…`);
     setYtFallback(true);
-  }, []);
+    // Fetch synced lyrics in parallel — best effort, ignore failures
+    if (nowPlaying?.song_title) {
+      setLyricsStatus('loading');
+      const params = new URLSearchParams({
+        title:  nowPlaying.song_title,
+        artist: nowPlaying.artist_name || '',
+      });
+      fetch(`/api/songs/lyrics?${params}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.lrc) {
+            setFallbackLyrics(data.lrc);
+            setLyricsStatus('found');
+          } else {
+            setLyricsStatus('not_found');
+          }
+        })
+        .catch(() => setLyricsStatus('not_found'));
+    }
+  }, [nowPlaying]);
 
   const handleFallbackError = useCallback((msg) => {
     setYtError(`yt-dlp failed: ${msg} — skipping…`);
@@ -140,11 +186,33 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
               />
             )}
 
-            {nowPlaying.lyrics_data && (
-              <LyricsOverlay
-                lyricsData={nowPlaying.lyrics_data}
-                currentTimeMs={currentMs}
-              />
+            {/* Lyrics: use fetched LRC when in fallback, otherwise song's own lyrics_data */}
+            {/* Lyrics: use fetched LRC when in fallback, otherwise song's own lyrics_data */}
+            {(nowPlaying.lyrics_data || fallbackLyrics) && (
+              <>
+                <LyricsOverlay
+                  lyricsData={fallbackLyrics || nowPlaying.lyrics_data}
+                  currentTimeMs={currentMs + lyricsOffset}
+                />
+                {lyricsOffset !== 0 && (
+                  <div style={{
+                    position: 'absolute', bottom: 16, right: 16,
+                    background: 'rgba(0,0,0,0.7)', color: '#fff',
+                    padding: '4px 10px', borderRadius: 6,
+                    fontSize: 13, fontFamily: 'monospace',
+                    pointerEvents: 'none',
+                  }}>
+                    lyrics {lyricsOffset > 0 ? '+' : ''}{lyricsOffset}ms &nbsp;[ early &nbsp;] late
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* No-lyrics notice — shown only during yt-dlp fallback when search found nothing */}
+            {ytFallback && lyricsStatus === 'not_found' && (
+              <div style={styles.noLyricsNotice}>
+                🎵 Audio only — no lyrics found
+              </div>
             )}
           </>
         )}
@@ -161,12 +229,8 @@ export default function DisplayPage({ pin }) {  const { emit, on, connected } = 
       <NowPlayingBanner song={nowPlaying} />
       <QueueBar queue={queue} />
 
-      {/* Mic indicator */}
-      {mics.length > 0 && (
-        <div style={styles.micIndicator}>
-          🎤 {mics.length} mic{mics.length !== 1 ? 's' : ''}
-        </div>
-      )}
+      {/* Mic controls panel (volume per channel + reverb) */}
+      <MicControls mics={mics} />
 
       {/* YouTube error toast */}
       {ytError && (
@@ -209,17 +273,6 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
-  micIndicator: {
-    position:     'absolute',
-    top:          20,
-    right:        20,
-    background:   'rgba(0,0,0,0.6)',
-    color:        '#fff',
-    fontSize:     13,
-    padding:      '6px 12px',
-    borderRadius: theme.radii.pill,
-    border:       `1px solid ${theme.colors.border}`,
-  },
   errorToast: {
     position:     'absolute',
     bottom:       80,
@@ -233,5 +286,17 @@ const styles = {
     borderRadius: theme.radii.md,
     zIndex:       100,
     whiteSpace:   'nowrap',
+  },
+  noLyricsNotice: {
+    position:     'absolute',
+    bottom:       80,
+    right:        24,
+    background:   'rgba(0,0,0,0.55)',
+    color:        'rgba(255,255,255,0.55)',
+    fontSize:     13,
+    padding:      '6px 14px',
+    borderRadius: theme.radii.pill,
+    border:       `1px solid rgba(255,255,255,0.12)`,
+    pointerEvents: 'none',
   },
 };

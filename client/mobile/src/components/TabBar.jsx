@@ -3,7 +3,7 @@ import theme from '../theme.js';
 const TABS = [
   { id: 'search', label: 'Search',  icon: '🔍' },
   { id: 'queue',  label: 'Queue',   icon: '📋' },
-  { id: 'mic',    label: 'Mic',     icon: '🎤' },
+  { id: 'mic',    label: 'Mic',     icon: '🎤', wip: true },
   { id: 'upload', label: 'Upload',  icon: '📤' },
 ];
 
@@ -13,20 +13,25 @@ export default function TabBar({ activeTab, onTab, queueCount }) {
       {TABS.map(tab => (
         <button
           key={tab.id}
+          disabled={tab.wip}
           style={{
             ...styles.tab,
-            borderTop: activeTab === tab.id
+            ...(tab.wip ? styles.tabDisabled : {}),
+            borderTop: !tab.wip && activeTab === tab.id
               ? `2px solid ${theme.colors.primary}`
               : '2px solid transparent',
-            color: activeTab === tab.id ? theme.colors.primary : theme.colors.textMuted,
+            color: tab.wip
+              ? 'rgba(255,255,255,0.2)'
+              : activeTab === tab.id ? theme.colors.primary : theme.colors.textMuted,
           }}
-          onClick={() => onTab(tab.id)}
+          onClick={() => !tab.wip && onTab(tab.id)}
         >
           <span style={styles.icon}>
             {tab.icon}
             {tab.id === 'queue' && queueCount > 0 && (
               <span style={styles.badge}>{queueCount > 9 ? '9+' : queueCount}</span>
             )}
+            {tab.wip && <span style={styles.wipBadge}>WIP</span>}
           </span>
           <span style={styles.label}>{tab.label}</span>
         </button>
@@ -76,5 +81,21 @@ const styles = {
     borderRadius: '999px',
     padding:    '1px 5px',
     lineHeight: '14px',
+  },
+  wipBadge: {
+    position:      'absolute',
+    top:           -4,
+    right:         -10,
+    background:    'rgba(255,255,255,0.15)',
+    color:         'rgba(255,255,255,0.4)',
+    fontSize:      8,
+    fontWeight:    700,
+    padding:       '1px 4px',
+    borderRadius:  3,
+    letterSpacing: '0.05em',
+  },
+  tabDisabled: {
+    cursor: 'default',
+    filter: 'grayscale(1)',
   },
 };

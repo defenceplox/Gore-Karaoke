@@ -11,6 +11,8 @@ let reverbNode  = null;
 let reverbGain  = null;
 let dryGain     = null;
 
+let _reverbAmount = 0; // 0–1, tracks current reverb level
+
 const micChannels = new Map(); // peerId/deviceId → { source, gain }
 
 function getContext() {
@@ -124,9 +126,14 @@ export function setMasterGain(value) {
 
 export function setReverbAmount(value) {
   // value 0–1
+  _reverbAmount = value;
   getContext();
   reverbGain.gain.linearRampToValueAtTime(value * 0.6,  ctx.currentTime + 0.1);
   dryGain.gain.linearRampToValueAtTime(1.0 - value * 0.3, ctx.currentTime + 0.1);
+}
+
+export function getReverbAmount() {
+  return _reverbAmount;
 }
 
 export function getMicIds() {
