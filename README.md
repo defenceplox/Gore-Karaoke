@@ -161,6 +161,15 @@ Please don't add a subscription tier.
 
 ---
 
+## ☕ Buy Me a Drink
+
+This project was born over cocktails, so it's only fitting.
+If it saved you from buying an overpriced karaoke subscription, or just made your party a bit more chaotic, consider returning the favour.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/defenceplox)
+
+---
+
 ## 📜 License
 
 MIT — because this was built for fun, at a bar, and should stay that way.
