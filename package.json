@@ -1,0 +1,17 @@
+{
+  "name": "karaoke",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter server dev\" \"pnpm --filter display dev\" \"pnpm --filter mobile dev\"",
+    "dev:server": "pnpm --filter server dev",
+    "dev:display": "pnpm --filter display dev",
+    "dev:mobile": "pnpm --filter mobile dev",
+    "build": "pnpm --filter display build && pnpm --filter mobile build",
+    "start": "pnpm --filter server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

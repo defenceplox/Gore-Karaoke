@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+
+# Dev certs
+certs/
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+
+# Uploaded song files (session-scoped, not committed)
+server/public/songs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp
