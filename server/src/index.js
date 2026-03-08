@@ -106,7 +106,6 @@ registerSocketHandlers(io);
 // PeerJS requires HTTPS (WebRTC constraint). Only enable when certs are present.
 if (hasCerts) {
   const peerServer = ExpressPeerServer(server, {
-    path: '/',
     allow_discovery: false,
   });
   app.use('/peerjs', peerServer);

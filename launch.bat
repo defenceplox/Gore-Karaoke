@@ -8,7 +8,7 @@ echo    Bootleggers Karaoke ^| Starting up...
 echo  ============================================
 echo.
 
-:: ── Prerequisites check ────────────────────────────────────────────────────
+:: -- Prerequisites check ----------------------------------------------------------
 
 where node >nul 2>&1
 if errorlevel 1 (
@@ -31,7 +31,7 @@ if errorlevel 1 (
     echo.
 )
 
-:: ── Dependencies ───────────────────────────────────────────────────────────
+:: -- Dependencies -----------------------------------------------------------------
 
 if not exist "node_modules" (
     echo [INFO] Installing dependencies (first run may take a minute)...
@@ -40,7 +40,7 @@ if not exist "node_modules" (
     echo.
 )
 
-:: ── Environment ────────────────────────────────────────────────────────────
+:: -- Environment ------------------------------------------------------------------
 
 if not exist ".env" (
     if exist ".env.example" (
@@ -51,7 +51,7 @@ if not exist ".env" (
     )
 )
 
-:: ── Build clients if needed ────────────────────────────────────────────────
+:: -- Build clients if needed ------------------------------------------------------
 
 if not exist "client\display\dist\index.html" (
     echo [INFO] Building display client...
@@ -65,7 +65,7 @@ if not exist "client\mobile\dist\index.html" (
     if errorlevel 1 ( echo [ERROR] Mobile build failed. & pause & exit /b 1 )
 )
 
-:: ── Launch ─────────────────────────────────────────────────────────────────
+:: -- Launch -----------------------------------------------------------------------
 
 echo.
 echo  Certs will be auto-generated on first run if missing.

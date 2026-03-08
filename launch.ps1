@@ -10,7 +10,7 @@ Write-Host "    Bootleggers Karaoke | Starting up..."      -ForegroundColor Cyan
 Write-Host "  ============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Prerequisites ────────────────────────────────────────────────────────────
+# -- Prerequisites ------------------------------------------------------------------
 
 function Check-Command($cmd) {
     return [bool](Get-Command $cmd -ErrorAction SilentlyContinue)
@@ -32,7 +32,7 @@ if (-not (Check-Command "yt-dlp")) {
     Write-Host ""
 }
 
-# ── Dependencies ─────────────────────────────────────────────────────────────
+# -- Dependencies -------------------------------------------------------------------
 
 if (-not (Test-Path "node_modules")) {
     Write-Host "[INFO] Installing dependencies (first run)..." -ForegroundColor Cyan
@@ -40,18 +40,18 @@ if (-not (Test-Path "node_modules")) {
     Write-Host ""
 }
 
-# ── Environment ──────────────────────────────────────────────────────────────
+# -- Environment --------------------------------------------------------------------
 
 if (-not (Test-Path ".env")) {
     if (Test-Path ".env.example") {
         Write-Host "[INFO] Creating .env from .env.example..." -ForegroundColor Cyan
         Copy-Item ".env.example" ".env"
     } else {
-        Write-Host "[WARN] No .env file found — server will use defaults." -ForegroundColor Yellow
+        Write-Host "[WARN] No .env file found - server will use defaults." -ForegroundColor Yellow
     }
 }
 
-# ── Build clients if needed ──────────────────────────────────────────────────
+# -- Build clients if needed --------------------------------------------------------
 
 if (-not (Test-Path "client\display\dist\index.html")) {
     Write-Host "[INFO] Building display client..." -ForegroundColor Cyan
@@ -63,7 +63,7 @@ if (-not (Test-Path "client\mobile\dist\index.html")) {
     pnpm --filter mobile build
 }
 
-# ── Optional: import CA cert into Windows trust store ────────────────────────
+# -- Optional: import CA cert into Windows trust store ------------------------------
 # Uncomment the block below (requires running as Administrator) to make Chrome/Edge
 # trust the local CA without showing a certificate warning on the host machine.
 #
@@ -74,7 +74,7 @@ if (-not (Test-Path "client\mobile\dist\index.html")) {
 #     Write-Host "[INFO] CA cert trusted. No more browser warnings on this machine." -ForegroundColor Green
 # }
 
-# ── Launch ───────────────────────────────────────────────────────────────────
+# -- Launch -------------------------------------------------------------------------
 
 Write-Host ""
 Write-Host "  Certs are auto-generated on first run." -ForegroundColor Green
