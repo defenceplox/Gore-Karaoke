@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import theme from '../theme.js';
 
-export default function SearchPage({ pin, singerName, onAdd }) {
+export default function SearchPage({ pin, singerName, emit, onAdd }) {
   const [query,   setQuery]   = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,22 +27,17 @@ export default function SearchPage({ pin, singerName, onAdd }) {
     }
   }, [query, pin]);
 
-  const addToQueue = useCallback(async (song) => {
+  const addToQueue = useCallback((song) => {
+    if (!emit) return;
     setAdding(song.songId);
-    try {
-      const resp = await fetch('/api/queue', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Session-Pin': pin },
-        body: JSON.stringify({ songData: song, singerName }),
-      });
-      const data = await resp.json();
-      if (data.ok) {
+    emit('queue:add', { songData: song, singerName }, (resp) => {
+      setAdding(null);
+      if (resp?.ok) {
         setAdded(prev => new Set([...prev, song.songId]));
-        onAdd?.(data.queue);
+        onAdd?.(resp.queue);
       }
-    } catch {}
-    finally { setAdding(null); }
-  }, [pin, singerName, onAdd]);
+    });
+  }, [emit, singerName, onAdd]);
 
   return (
     <div style={styles.page}>

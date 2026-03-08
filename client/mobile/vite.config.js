@@ -1,9 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import https from 'https';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const devAgent = new https.Agent({ rejectUnauthorized: false });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const certsDir  = path.resolve(__dirname, '../../certs');
+const certFile  = path.join(certsDir, 'localhost.pem');
+const keyFile   = path.join(certsDir, 'localhost-key.pem');
+const hasCerts  = fs.existsSync(certFile) && fs.existsSync(keyFile);
+const httpsOpts = hasCerts ? { cert: fs.readFileSync(certFile), key: fs.readFileSync(keyFile) } : undefined;
 
 export default defineConfig({
   plugins: [
@@ -34,15 +41,17 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: '0.0.0.0',  // listen on all interfaces so phones on LAN can reach it
+    port: 3002,
+    https: httpsOpts,
     proxy: {
-      '/api':    { target: 'https://localhost:3000', secure: false, changeOrigin: true, agent: devAgent },
-      '/peerjs': { target: 'https://localhost:3000', secure: false, changeOrigin: true, agent: devAgent },
+      '/api':    { target: 'https://localhost:3000', secure: false, changeOrigin: true },
+      '/peerjs': { target: 'https://localhost:3000', secure: false, changeOrigin: true },
       '/socket.io': {
-        target:      'https://localhost:3000',
-        ws:          true,
-        secure:      false,
+        target:       'https://localhost:3000',
+        ws:           true,
+        secure:       false,
         changeOrigin: true,
-        agent:       devAgent,
       },
     },
   },

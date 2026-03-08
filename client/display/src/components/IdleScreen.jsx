@@ -2,7 +2,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import theme from '../theme.js';
 
 export default function IdleScreen({ pin, queueLength, onStart }) {
-  const remoteUrl = `${window.location.protocol}//${window.location.host}/remote`;
+  // In dev the display Vite runs on 3001, mobile Vite on 3002.
+  // In production everything is served from Express on 3000.
+  const isDev = window.location.port === '3001';
+  const serverHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '192.168.0.55'
+    : window.location.hostname;
+  const serverPort = isDev ? '3002' : '3000';
+  const remoteUrl = `${window.location.protocol}//${serverHost}:${serverPort}/remote`;
 
   return (
     <div style={styles.root} onClick={queueLength > 0 ? onStart : undefined}>

@@ -63,6 +63,7 @@ export default function App() {
           <SearchPage
             pin={pin}
             singerName={singerName}
+            emit={emit}
             onAdd={(q) => setActiveTab('queue')}
           />
         )}

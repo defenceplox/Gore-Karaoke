@@ -57,6 +57,11 @@ async function loadReverb() {
   reverbNode = context.createConvolver();
   reverbNode.buffer = impulse;
   reverbNode.connect(reverbGain);
+
+  // Retroactively connect any mics that were added before reverb loaded
+  for (const { gain } of micChannels.values()) {
+    try { gain.connect(reverbNode); } catch {}
+  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -76,6 +81,11 @@ export function connectAudioElement(audioEl) {
 /** Add a microphone stream (physical mic or WebRTC phone mic) */
 export function addMic(id, stream, initialGain = 1.0) {
   const context = getContext();
+
+  // Resume context immediately — WebRTC mic arriving means user has already
+  // granted permissions, so browsers will honour this resume() call.
+  context.resume().catch(() => {});
+
   if (micChannels.has(id)) removeMic(id);
 
   const source = context.createMediaStreamSource(stream);
@@ -83,11 +93,8 @@ export function addMic(id, stream, initialGain = 1.0) {
   gain.gain.value = initialGain;
 
   source.connect(gain);
-
-  // Route through reverb
-  const splitter = context.createChannelSplitter(1);
   gain.connect(dryGain);
-  gain.connect(reverbNode || dryGain); // fallback if reverb not loaded yet
+  if (reverbNode) gain.connect(reverbNode);
 
   micChannels.set(id, { source, gain });
   console.log(`🎤 Mic added: ${id}`);

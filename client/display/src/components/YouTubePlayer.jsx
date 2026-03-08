@@ -26,8 +26,9 @@ function loadYouTubeAPI() {
  * Embeds a YouTube video (used as an audio karaoke track).
  * Fires onTimeUpdate every 500ms with currentTime for lyrics sync.
  * Fires onEnded when the video finishes.
+ * Fires onError(message) when the video can't be played (e.g. embedding disabled).
  */
-export default function YouTubePlayer({ videoId, onEnded, onTimeUpdate, style = {} }) {
+export default function YouTubePlayer({ videoId, onEnded, onTimeUpdate, onError, style = {} }) {
   const containerRef = useRef(null);
   const playerRef    = useRef(null);
   const tickRef      = useRef(null);
@@ -51,6 +52,7 @@ export default function YouTubePlayer({ videoId, onEnded, onTimeUpdate, style = 
       if (cancelled) return;
       if (playerRef.current) {
         playerRef.current.loadVideoById(videoId);
+        playerRef.current.playVideo();
         return;
       }
 
@@ -58,6 +60,7 @@ export default function YouTubePlayer({ videoId, onEnded, onTimeUpdate, style = 
         videoId,
         playerVars: {
           autoplay:       1,
+          mute:           1,  // start muted so browser permits autoplay
           controls:       0,
           disablekb:      1,
           fs:             0,
@@ -66,11 +69,32 @@ export default function YouTubePlayer({ videoId, onEnded, onTimeUpdate, style = 
           iv_load_policy: 3,
         },
         events: {
-          onReady:       (e) => { e.target.setVolume(100); },
+          onReady: (e) => {
+            e.target.playVideo();
+            // Unmute after a tick — browser allows this once playback has started
+            setTimeout(() => { e.target.unMute(); e.target.setVolume(100); }, 100);
+          },
+          onError:       (e) => {
+            stopTick();
+            // 101 / 150 = embedding disabled by owner; 100 = video not found/private
+            const msg = (e.data === 101 || e.data === 150)
+              ? 'Embedding disabled by video owner'
+              : `YouTube error ${e.data}`;
+            onError?.(msg);
+          },
           onStateChange: (e) => {
-            if (e.data === window.YT.PlayerState.PLAYING) startTick();
-            if (e.data === window.YT.PlayerState.ENDED) { stopTick(); onEnded?.(); }
-            if (e.data === window.YT.PlayerState.PAUSED) stopTick();
+            const S = window.YT.PlayerState;
+            // CUED fires when loadVideoById is called on an existing player
+            if (e.data === S.CUED) {
+              e.target.playVideo();
+            }
+            if (e.data === S.PLAYING) {
+              // Ensure unmuted (may have been muted for autoplay bypass)
+              if (e.target.isMuted()) { e.target.unMute(); e.target.setVolume(100); }
+              startTick();
+            }
+            if (e.data === S.ENDED)  { stopTick(); onEnded?.(); }
+            if (e.data === S.PAUSED) { stopTick(); }
           },
         },
       });

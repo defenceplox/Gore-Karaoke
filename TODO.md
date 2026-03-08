@@ -1,5 +1,5 @@
 # Karaoke Project — Progress Backup
-_Last updated: 7 March 2026_
+_Last updated: 8 March 2026_
 
 ## ✅ Completed
 
@@ -7,94 +7,93 @@ _Last updated: 7 March 2026_
 - [x] Root `package.json` with pnpm workspaces (`server/`, `client/display/`, `client/mobile/`)
 - [x] `pnpm-workspace.yaml`
 - [x] `.gitignore`
-- [x] `.env` (with placeholder for YOUTUBE_API_KEY)
+- [x] `.env` (`CERT_PATH`, `KEY_PATH`, `YOUTUBE_API_KEY` all active)
 - [x] `scripts/gen-certs.sh` (mkcert HTTPS for local dev)
+- [x] mkcert installed + certs generated for `localhost` + `192.168.0.55`
+- [x] Firewall ports 3000/3001/3002 open for LAN access
+
+### Windows Dev Environment
+- [x] Node.js v24.14.0
+- [x] pnpm v9
+- [x] Python 3.12 + VS Build Tools 2026 (for better-sqlite3 native addon)
+- [x] yt-dlp v2026.03.03 (winget)
+- [x] `pnpm install` succeeds (better-sqlite3 compiles)
 
 ### Server (`server/`)
 - [x] `package.json` (Express, Socket.io, PeerJS, better-sqlite3, multer, uuid)
-- [x] `src/index.js` — Express app, HTTPS/HTTP server, Socket.io, PeerJS, static serving
-- [x] `src/db/database.js` — SQLite init, sessions + queue_items + votes tables
-- [x] `src/db/queries.js` — All queue/session CRUD (createSession, getQueue, addToQueue, removeFromQueue, reorderQueue, voteForItem, markPlaying, skipCurrent, getNowPlaying)
+- [x] `src/index.js` — HTTPS/HTTP, cert paths resolved from `__dirname`, PeerJS gated behind hasCerts, `/rootCA.pem` CA cert endpoint
+- [x] `src/db/database.js` — SQLite init, WAL mode, sessions + queue_items + votes tables
+- [x] `src/db/queries.js` — All queue/session CRUD
 - [x] `src/socket/handlers.js` — All Socket.io events (session:join, queue:*, playback:*, mic:*)
 - [x] `src/routes/sessions.js` — POST /api/sessions, GET /api/sessions/:pin
-- [x] `src/routes/songs.js` — GET /api/songs/search, GET /api/songs/local
+- [x] `src/routes/songs.js` — GET /api/songs/search, /api/songs/local, /api/songs/ytstream
 - [x] `src/routes/queue.js` — Full REST queue API (GET/POST/DELETE/PATCH/vote)
 - [x] `src/routes/upload.js` — CDG+MP3 pair upload (multer, session-scoped storage)
-- [x] `src/lib/youtube.js` — YouTube Data API v3 search helper
-- [x] `src/lib/songIndex.js` — In-memory CDG song index (parse filenames, search, indexUploadedFiles)
+- [x] `src/lib/youtube.js` — YouTube Data API v3 + youtube-sr scraper fallback
+- [x] `src/lib/songIndex.js` — In-memory CDG song index
 - [x] `src/lib/cleanup.js` — Session expiry + file cleanup (runs hourly)
+- [x] `src/lib/ytdlp.js` — yt-dlp wrapper: `getStreamUrl(videoId)` with 90-min cache + Windows path fallback
 
 ### Display Client (`client/display/`)
 - [x] `package.json` (React 19, Vite, cdgraphics, socket.io-client, peerjs)
-- [x] `vite.config.js` (base `/display/`, proxy to server)
-- [x] `index.html`
+- [x] `vite.config.js` — HTTPS with cert auto-detect, proxy to server
+- [x] `index.html` — `@keyframes spin` defined globally
 - [x] `src/main.jsx`
-- [x] `src/App.jsx` — Session create/join screen, PIN URL routing
+- [x] `src/App.jsx` — Session create/join screen, PIN URL routing, defensive error coercion
 - [x] `src/theme.js`
 - [x] `src/hooks/useSocket.js` — Shared socket singleton with session:join
-- [x] `src/audio/mixer.js` — Web Audio API mixer (mic channels, reverb, compressor, gain)
+- [x] `src/audio/mixer.js` — Web Audio mixer: context.resume() on addMic, correct reverb routing
+- [x] `src/audio/songCache.js` — Service worker cache priming for next queue songs
+- [x] `src/sw.js` — Service worker (vite-plugin-pwa injectManifest)
 - [x] `src/components/CDGPlayer.jsx` — CDG+MP3 playback via cdgraphics → canvas
-- [x] `src/components/YouTubePlayer.jsx` — YouTube IFrame API wrapper with time ticks
+- [x] `src/components/YouTubePlayer.jsx` — IFrame API: muted autoplay, explicit playVideo(), unmute after 100ms, onError for codes 101/150
+- [x] `src/components/YTFallbackPlayer.jsx` — yt-dlp audio fallback: fetch stream URL, play via `<audio>`, onError callback
 - [x] `src/components/LyricsOverlay.jsx` — UltraStar .txt parser + animated syllable highlight
 - [x] `src/components/QueueBar.jsx` — Bottom scrolling upcoming queue bar
 - [x] `src/components/Countdown.jsx` — 3-2-1-GO countdown before song starts
 - [x] `src/components/NowPlayingBanner.jsx` — Top banner with song title + singer
 - [x] `src/components/MicManager.jsx` — Physical mic + PeerJS phone mic receiver
-- [x] `src/pages/DisplayPage.jsx` — Main TV display page (wires all components together)
+- [x] `src/pages/DisplayPage.jsx` — Full wiring: CDG/YouTube/YTFallback players, ytFallback state, handleYTError → fallback → auto-skip
 
 ### Mobile Client (`client/mobile/`)
 - [x] `package.json` (React 19, Vite, vite-plugin-pwa, socket.io-client, peerjs)
-- [x] `vite.config.js` (base `/remote/`, PWA manifest, proxy to server)
-- [x] `index.html` (mobile meta tags)
+- [x] `vite.config.js` — HTTPS with cert auto-detect, PWA manifest, proxy to server
+- [x] `index.html` — `@keyframes spin` defined globally, mobile meta tags
 - [x] `src/main.jsx`
-- [x] `src/App.jsx` — Tab shell (Search/Queue/Mic), header, session restore
+- [x] `src/App.jsx` — Tab shell (Search/Queue/Mic/Upload), header, session restore
 - [x] `src/theme.js`
 - [x] `src/hooks/useSocket.js` — Socket with queue/nowPlaying state
 - [x] `src/components/TabBar.jsx` — Bottom tab bar with queue count badge
 - [x] `src/pages/JoinPage.jsx` — PIN + name entry
-- [x] `src/pages/SearchPage.jsx` — Song search → add to queue
+- [x] `src/pages/SearchPage.jsx` — Song search → `emit('queue:add')` via socket
 - [x] `src/pages/QueuePage.jsx` — Live queue, vote, remove, skip
 - [x] `src/pages/MicPage.jsx` — WebRTC phone mic via PeerJS + VU meter + lyrics progress
+- [x] `src/pages/UploadPage.jsx` — CDG+MP3 pair upload form
 
 ---
 
 ## 🔲 Still To Do
 
-### Dependencies
-- [ ] Fix `peer` package version in `server/package.json` — correct version is `^1.0.2` not `^9.0.1`
-- [ ] Run `pnpm install` at root to install all workspace dependencies
-
-### Service Worker / Caching (Display)
-- [ ] Create `client/display/src/sw.js` — Workbox service worker with `RangeRequestsPlugin` for audio caching
-- [ ] Register service worker in `client/display/src/main.jsx`
-- [ ] Add cache-priming logic in `DisplayPage.jsx` (pre-cache next 2 songs in queue)
-
 ### PWA Icons
-- [ ] Create placeholder `client/mobile/public/icons/icon-192.png` and `icon-512.png`
-  (can be generated with a simple canvas script or replaced with real assets)
-
-### Upload UI (Mobile)
-- [ ] Add an "Upload" tab or section in the mobile client for CDG+MP3 pair upload
-  (links to `POST /api/upload`)
-
-### QR Code
-- [ ] Display a QR code on the TV idle screen pointing to `/remote/<pin>`
-  (use `qrcode` npm package or `qrcode.react`)
+- [ ] Create `client/mobile/public/icons/icon-192.png` and `icon-512.png`
+  (PWA install prompt won't show without these)
 
 ### Polish / Nice-to-haves
+- [ ] QR code on TV idle screen pointing to `/remote/<pin>` (use `qrcode.react`)
 - [ ] Drag-to-reorder in QueuePage (mobile) using pointer events
-- [ ] Mic volume slider per-channel on display (MicManager UI overlay)
+- [ ] Mic volume slider per-channel on display
 - [ ] Reverb toggle button on display
-- [ ] Song end auto-advance (currently wired, needs E2E test)
 - [ ] Error boundary components
 - [ ] Dark/light mode toggle (mobile)
 
-### Testing
-- [ ] `pnpm install` + `pnpm dev` smoke test — verify server starts
-- [ ] Create a session via `POST /api/sessions`, check PIN returned
-- [ ] Add a YouTube song, verify it appears on display queue bar
-- [ ] Upload a CDG+MP3 pair, verify it indexes and plays
-- [ ] Phone mic → TV audio path test (need HTTPS certs first)
+### Live Testing Checklist
+- [ ] `pnpm dev` — all three processes start cleanly
+- [ ] Create session on TV, join from phone
+- [ ] Search YouTube song → appears in queue on TV
+- [ ] Start playback → countdown → video plays with audio
+- [ ] Trigger embed-blocked video → yt-dlp fallback kicks in, audio plays
+- [ ] Upload CDG+MP3 pair → indexes → plays on TV
+- [ ] Phone mic → audio heard through TV speakers
 
 ### Deployment (optional)
 - [ ] `scripts/gen-certs.sh` — run to generate LAN HTTPS certs

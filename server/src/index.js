@@ -19,8 +19,11 @@ import uploadRouter from './routes/upload.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT || 3000;
-const CERT_PATH = process.env.CERT_PATH;
-const KEY_PATH = process.env.KEY_PATH;
+// Resolve cert paths relative to the server/ directory so they work
+// regardless of which directory pnpm/node is invoked from.
+const _serverRoot = path.resolve(__dirname, '..');
+const CERT_PATH = process.env.CERT_PATH ? path.resolve(_serverRoot, process.env.CERT_PATH) : null;
+const KEY_PATH  = process.env.KEY_PATH  ? path.resolve(_serverRoot, process.env.KEY_PATH)  : null;
 
 // ── Express app ─────────────────────────────────────────────────────────────
 const app = express();
@@ -39,18 +42,29 @@ const songsDir = path.join(__dirname, '../public/songs');
 fs.mkdirSync(songsDir, { recursive: true });
 app.use('/songs', express.static(songsDir));
 
+// Serve mkcert root CA for easy phone trust installation (dev only)
+const caCertPath = path.join(__dirname, '../../certs/rootCA.pem');
+if (process.env.NODE_ENV !== 'production' && fs.existsSync(caCertPath)) {
+  app.get('/rootCA.pem', (req, res) => {
+    res.setHeader('Content-Type', 'application/x-pem-file');
+    res.setHeader('Content-Disposition', 'attachment; filename="rootCA.pem"');
+    res.sendFile(caCertPath);
+  });
+  console.log('📲 CA cert available at /rootCA.pem (install on phone to trust HTTPS)');
+}
+
 // API routes
 app.use('/api/songs',    songsRouter);
 app.use('/api/queue',    queueRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/upload',   uploadRouter);
 
-// Fallback: serve mobile app for all /remote/* routes (SPA)
-app.get('/remote/*', (req, res) => {
+// Fallback: serve mobile app for /remote and all /remote/* routes (SPA)
+app.get(['/remote', '/remote/*'], (req, res) => {
   const index = path.join(mobileDist, 'index.html');
   fs.existsSync(index) ? res.sendFile(index) : res.send('Mobile client not built yet — run pnpm build');
 });
-app.get('/display/*', (req, res) => {
+app.get(['/display', '/display/*'], (req, res) => {
   const index = path.join(displayDist, 'index.html');
   fs.existsSync(index) ? res.sendFile(index) : res.send('Display client not built yet — run pnpm build');
 });
@@ -86,18 +100,23 @@ const io = new Server(server, {
 registerSocketHandlers(io);
 
 // ── PeerJS server (WebRTC signaling for phone mics) ──────────────────────────
-const peerServer = ExpressPeerServer(server, {
-  path: '/',
-  allow_discovery: false,
-});
-app.use('/peerjs', peerServer);
+// PeerJS requires HTTPS (WebRTC constraint). Only enable when certs are present.
+if (hasCerts) {
+  const peerServer = ExpressPeerServer(server, {
+    path: '/',
+    allow_discovery: false,
+  });
+  app.use('/peerjs', peerServer);
 
-peerServer.on('connection', (client) => {
-  console.log(`📱 Peer connected: ${client.getId()}`);
-});
-peerServer.on('disconnect', (client) => {
-  console.log(`📱 Peer disconnected: ${client.getId()}`);
-});
+  peerServer.on('connection', (client) => {
+    console.log(`📱 Peer connected: ${client.getId()}`);
+  });
+  peerServer.on('disconnect', (client) => {
+    console.log(`📱 Peer disconnected: ${client.getId()}`);
+  });
+} else {
+  console.warn('⚠️  PeerJS disabled — requires HTTPS. Phone mic will not work.');
+}
 
 // ── Init & start ─────────────────────────────────────────────────────────────
 initDb();

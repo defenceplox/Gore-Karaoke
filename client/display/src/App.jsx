@@ -26,7 +26,7 @@ export default function App() {
         window.history.pushState({}, '', `/display/${data.session.pin}`);
         setPin(data.session.pin);
       } else {
-        setError(data.error || 'Failed to create session');
+        setError(typeof data.error === 'string' ? data.error : (data.error?.message ?? 'Failed to create session'));
       }
     } catch (e) {
       setError(e.message);
@@ -44,7 +44,7 @@ export default function App() {
       window.history.pushState({}, '', `/display/${inputPin}`);
       setPin(inputPin);
     } else {
-      setError('Session not found');
+      setError(typeof data.error === 'string' ? data.error : 'Session not found');
     }
   };
 
