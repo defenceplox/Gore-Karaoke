@@ -100,6 +100,8 @@ if (hasCerts) {
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
+// Attach io to Express so REST routes (e.g. queue.js) can emit socket events
+app.set('io', io);
 registerSocketHandlers(io);
 
 // ── PeerJS server (WebRTC signaling for phone mics) ──────────────────────────
@@ -138,3 +140,20 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`   TV Display → ${protocol}://localhost:${PORT}/display`);
   console.log(`   Mobile     → ${protocol}://localhost:${PORT}/remote\n`);
 });
+
+// ── Graceful shutdown ────────────────────────────────────────────────────────────────────────────
+function shutdown(signal) {
+  console.log(`\n🛑 ${signal} received — shutting down gracefully…`);
+  // Notify all connected clients so they can show a reconnecting state
+  io.emit('server:shutdown');
+  server.close(() => {
+    console.log('✅ HTTP server closed.');
+    // Give socket.io a moment to flush, then exit
+    io.close(() => process.exit(0));
+  });
+  // Force exit after 5 s if something hangs
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));

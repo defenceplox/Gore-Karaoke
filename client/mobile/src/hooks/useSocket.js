@@ -13,10 +13,11 @@ function getSocket() {
 
 export function useSocket(pin) {
   const socketRef = useRef(null);
-  const [connected,  setConnected]  = useState(false);
-  const [sessionId,  setSessionId]  = useState(null);
-  const [queue,      setQueue]      = useState([]);
-  const [nowPlaying, setNowPlaying] = useState(null);
+  const [connected,      setConnected]      = useState(false);
+  const [sessionId,      setSessionId]      = useState(null);
+  const [queue,          setQueue]          = useState([]);
+  const [nowPlaying,     setNowPlaying]     = useState(null);
+  const [serverStopping, setServerStopping] = useState(false);
 
   useEffect(() => {
     const socket = getSocket();
@@ -42,11 +43,13 @@ export function useSocket(pin) {
       setNowPlaying(np);
       setQueue(q);
     };
+    const onServerShutdown = () => setServerStopping(true);
 
     socket.on('connect',          onConnect);
     socket.on('disconnect',       onDisconnect);
     socket.on('queue:update',     onQueueUpdate);
     socket.on('playback:started', onPlaybackStart);
+    socket.on('server:shutdown',  onServerShutdown);
 
     if (!socket.connected) socket.connect();
     else onConnect();
@@ -56,6 +59,7 @@ export function useSocket(pin) {
       socket.off('disconnect',       onDisconnect);
       socket.off('queue:update',     onQueueUpdate);
       socket.off('playback:started', onPlaybackStart);
+      socket.off('server:shutdown',  onServerShutdown);
     };
   }, [pin]);
 
@@ -68,5 +72,5 @@ export function useSocket(pin) {
     return () => socketRef.current?.off(event, handler);
   }, []);
 
-  return { socket: socketRef.current, connected, sessionId, queue, nowPlaying, emit, on };
+  return { socket: socketRef.current, connected, sessionId, queue, nowPlaying, serverStopping, emit, on };
 }

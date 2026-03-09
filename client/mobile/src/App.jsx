@@ -5,6 +5,7 @@ import SearchPage  from './pages/SearchPage.jsx';
 import QueuePage   from './pages/QueuePage.jsx';
 import MicPage     from './pages/MicPage.jsx';
 import UploadPage  from './pages/UploadPage.jsx';
+import HistoryPage from './pages/HistoryPage.jsx';
 import TabBar      from './components/TabBar.jsx';
 import theme       from './theme.js';
 
@@ -13,7 +14,7 @@ export default function App() {
   const [singerName,  setSingerName]  = useState('');
   const [activeTab,   setActiveTab]   = useState('search');
 
-  const { connected, sessionId, queue, nowPlaying, emit, on } = useSocket(pin);
+  const { connected, sessionId, queue, nowPlaying, serverStopping, emit, on } = useSocket(pin);
 
   // Restore session from sessionStorage on reload
   useEffect(() => {
@@ -32,6 +33,16 @@ export default function App() {
 
   if (!pin) {
     return <JoinPage onJoin={handleJoin} />;
+  }
+
+  if (serverStopping) {
+    return (
+      <div style={styles.loading}>
+        <div style={{ fontSize: 36, marginBottom: 16 }}>⏸️</div>
+        <p style={{ color: '#fff', fontWeight: 700, margin: '0 0 8px', fontSize: 17 }}>Server restarting…</p>
+        <p style={{ color: theme.colors.textMuted, margin: 0, fontSize: 14 }}>Will reconnect automatically</p>
+      </div>
+    );
   }
 
   if (!connected) {
@@ -76,19 +87,16 @@ export default function App() {
           />
         )}
         {activeTab === 'mic' && (
-          <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 12, padding: 32, textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 48, filter: 'grayscale(1)', opacity: 0.4 }}>🎤</div>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 16, margin: 0, fontWeight: 600 }}>
-              Phone Mic — Coming Soon
-            </p>
-            <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13, margin: 0, maxWidth: 260 }}>
-              WebRTC microphone support is still in development.
-            </p>
-          </div>
+          <MicPage
+            pin={pin}
+            singerName={singerName}
+            nowPlaying={nowPlaying}
+            emit={emit}
+            on={on}
+          />
+        )}
+        {activeTab === 'history' && (
+          <HistoryPage pin={pin} />
         )}
         {activeTab === 'upload' && (
           <UploadPage pin={pin} />

@@ -101,26 +101,98 @@ function generateServerCert(caKeys, caCert, lanIPs) {
   return { cert, keys };
 }
 
+// Renew the server cert this many days before it expires.
+const RENEW_BEFORE_DAYS = 30;
+
 /**
- * Ensures HTTPS certs exist on disk.
- * If any cert file is missing, regenerates the full CA + server cert from scratch.
+ * Returns the set of IP SAN strings baked into an existing cert.
+ */
+function getCertIPs(cert) {
+  const ips = new Set();
+  try {
+    const san = cert.getExtension('subjectAltName');
+    if (san && san.altNames) {
+      for (const entry of san.altNames) {
+        if (entry.type === 7 /* IP */) ips.add(entry.ip);
+      }
+    }
+  } catch { /* ignore parse errors */ }
+  return ips;
+}
+
+/**
+ * Checks whether the existing server cert is still valid to use:
+ *   - All three PEM files must exist.
+ *   - The cert must not be expired or within RENEW_BEFORE_DAYS of expiry.
+ *   - Every current LAN IP must appear in the cert's SAN list.
+ *
+ * Returns { valid: true } or { valid: false, reason: string }.
+ */
+function checkExistingCert(certPath, keyPath, caCertPath, lanIPs) {
+  if (!fs.existsSync(certPath) || !fs.existsSync(keyPath) || !fs.existsSync(caCertPath)) {
+    return { valid: false, reason: 'missing cert files' };
+  }
+
+  let cert;
+  try {
+    cert = forge.pki.certificateFromPem(fs.readFileSync(certPath, 'utf8'));
+  } catch {
+    return { valid: false, reason: 'cert file is corrupt or unreadable' };
+  }
+
+  // Expiry check
+  const now         = new Date();
+  const renewAfter  = new Date(cert.validity.notAfter);
+  renewAfter.setDate(renewAfter.getDate() - RENEW_BEFORE_DAYS);
+  if (now >= renewAfter) {
+    const expired = now >= cert.validity.notAfter;
+    return {
+      valid: false,
+      reason: expired
+        ? `cert expired on ${cert.validity.notAfter.toDateString()}`
+        : `cert expires soon (${cert.validity.notAfter.toDateString()}) — renewing early`,
+    };
+  }
+
+  // IP coverage check — if the machine's LAN IP changed (DHCP / new network)
+  // the old cert won't cover the new address and phones will get a TLS error.
+  const certIPs = getCertIPs(cert);
+  const missing  = lanIPs.filter(ip => !certIPs.has(ip));
+  if (missing.length > 0) {
+    return { valid: false, reason: `LAN IP(s) not covered by cert: ${missing.join(', ')}` };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Ensures HTTPS certs exist on disk and are still valid.
+ *
+ * Automatically regenerates when:
+ *   - Any cert file is missing or corrupt
+ *   - The server cert has expired or is within 30 days of expiry
+ *   - The machine's LAN IP has changed since the cert was issued
+ *     (e.g. DHCP lease renewal or moved to a different network)
  *
  * @param {string} certPath    - Path to save server cert PEM
  * @param {string} keyPath     - Path to save server private key PEM
  * @param {string} caCertPath  - Path to save root CA cert PEM (served to phones)
  */
 export function ensureCerts(certPath, keyPath, caCertPath) {
-  if (fs.existsSync(certPath) && fs.existsSync(keyPath) && fs.existsSync(caCertPath)) {
-    return; // All certs already present
+  const lanIPs = getLanIPs();
+  const check  = checkExistingCert(certPath, keyPath, caCertPath, lanIPs);
+
+  if (check.valid) {
+    return; // Certs are present and still good
   }
 
-  const lanIPs = getLanIPs();
-  const hosts  = ['localhost', '127.0.0.1', ...lanIPs];
+  console.log(`🔐 Cert check: ${check.reason}`);
 
+  const hosts = ['localhost', '127.0.0.1', ...lanIPs];
   console.log('🔐 Generating self-signed CA + server cert...');
   console.log(`   Covering: ${hosts.join(', ')}`);
 
-  // Key generation takes a couple of seconds — expected at first boot
+  // Key generation takes a couple of seconds — expected at first boot / renewal
   const { cert: caCert, keys: caKeys } = generateCA();
   const { cert: serverCert, keys: serverKeys } = generateServerCert(caKeys, caCert, lanIPs);
 
@@ -133,7 +205,7 @@ export function ensureCerts(certPath, keyPath, caCertPath) {
 
   console.log('✅ Certs generated and saved to certs/');
   console.log('');
-  console.log('📲 To trust HTTPS on phones:');
+  console.log('📲 To trust HTTPS on phones (re-install if you just regenerated):');
   for (const ip of lanIPs) {
     console.log(`   https://${ip}:${process.env.PORT || 3000}/rootCA.pem  →  install on device`);
   }

@@ -1,10 +1,11 @@
 import theme from '../theme.js';
 
 const TABS = [
-  { id: 'search', label: 'Search',  icon: '🔍' },
-  { id: 'queue',  label: 'Queue',   icon: '📋' },
-  { id: 'mic',    label: 'Mic',     icon: '🎤', wip: true },
-  { id: 'upload', label: 'Upload',  icon: '📤' },
+  { id: 'search',  label: 'Search',  icon: '🔍' },
+  { id: 'queue',   label: 'Queue',   icon: '📋' },
+  { id: 'mic',     label: 'Mic',     icon: '🎤' },
+  { id: 'history', label: 'History', icon: '📜' },
+  { id: 'upload',  label: 'Upload',  icon: '📤' },
 ];
 
 export default function TabBar({ activeTab, onTab, queueCount }) {

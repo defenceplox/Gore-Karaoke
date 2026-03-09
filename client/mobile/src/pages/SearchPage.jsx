@@ -42,6 +42,14 @@ export default function SearchPage({ pin, singerName, emit, onAdd }) {
       if (resp?.ok) {
         setAdded(prev => new Set([...prev, song.songId]));
         onAdd?.(resp.queue);
+      } else if (resp?.duplicate) {
+        // Mark as added so the button shows ✓ and is disabled
+        setAdded(prev => new Set([...prev, song.songId]));
+        setError('That song is already in the queue');
+        setTimeout(() => setError(''), 3000);
+      } else if (resp?.error) {
+        setError(resp.error);
+        setTimeout(() => setError(''), 3000);
       }
     });
   }, [emit, singerName, onAdd]);

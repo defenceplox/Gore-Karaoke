@@ -149,6 +149,24 @@ export function getNowPlaying(sessionId) {
   return db.prepare(`SELECT * FROM queue_items WHERE session_id = ? AND status = 'playing' LIMIT 1`).get(sessionId) || null;
 }
 
+export function getHistory(sessionId) {
+  const db = getDb();
+  return db
+    .prepare(`
+      SELECT * FROM queue_items
+      WHERE session_id = ? AND status IN ('done', 'skipped')
+      ORDER BY added_at ASC
+    `)
+    .all(sessionId);
+}
+
+export function isVideoInQueue(sessionId, youtubeId) {
+  const db = getDb();
+  return !!db
+    .prepare(`SELECT 1 FROM queue_items WHERE session_id = ? AND youtube_id = ? AND status = 'queued' LIMIT 1`)
+    .get(sessionId, youtubeId);
+}
+
 function reorderPositions(sessionId) {
   const db = getDb();
   const items = db.prepare(`SELECT id FROM queue_items WHERE session_id = ? AND status = 'queued' ORDER BY position ASC`).all(sessionId);

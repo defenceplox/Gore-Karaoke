@@ -11,10 +11,12 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
-// yt-dlp binary — try PATH first, fall back to known winget install location
-const YTDLP_BIN = process.platform === 'win32'
-  ? 'yt-dlp.exe'
-  : 'yt-dlp';
+// yt-dlp binary — try PATH first, fall back to the winget install location.
+// Uses LOCALAPPDATA env var instead of a hardcoded username so it works for any user account.
+const YTDLP_BIN = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+const YTDLP_WINGET_FALLBACK = process.platform === 'win32'
+  ? `${process.env.LOCALAPPDATA}\\Microsoft\\WinGet\\Packages\\yt-dlp.yt-dlp_Microsoft.WinGet.Source_8wekyb3d8bbwe\\yt-dlp.exe`
+  : null;
 
 // Simple in-memory cache: videoId → { url, expires }
 const cache = new Map();
@@ -50,12 +52,17 @@ export async function getStreamUrl(videoId) {
     const { stdout } = await execFileAsync(YTDLP_BIN, args, { timeout: 20000 });
     url = stdout.trim().split('\n')[0]; // take first URL if multiple formats returned
   } catch (err) {
-    // If PATH lookup failed, try the known winget install path on Windows
-    if (process.platform === 'win32' && err.code === 'ENOENT') {
-      const fallbackBin = 'C:\\Users\\' + (process.env.USERNAME || 'defen') +
-        '\\AppData\\Local\\Microsoft\\WinGet\\Packages\\yt-dlp.yt-dlp_Microsoft.WinGet.Source_8wekyb3d8bbwe\\yt-dlp.exe';
-      const { stdout } = await execFileAsync(fallbackBin, args, { timeout: 20000 });
-      url = stdout.trim().split('\n')[0];
+    // If PATH lookup failed, try the known winget install location for this user
+    if (err.code === 'ENOENT' && YTDLP_WINGET_FALLBACK) {
+      try {
+        const { stdout } = await execFileAsync(YTDLP_WINGET_FALLBACK, args, { timeout: 20000 });
+        url = stdout.trim().split('\n')[0];
+      } catch (fallbackErr) {
+        throw new Error(
+          `yt-dlp not found on PATH or at winget install location.\n` +
+          `Install with: winget install yt-dlp.yt-dlp\nOriginal error: ${err.message}`
+        );
+      }
     } else {
       throw err;
     }
