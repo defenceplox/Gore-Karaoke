@@ -57,7 +57,7 @@ export default function YTFallbackPlayer({ videoId, onEnded, onTimeUpdate, onErr
       {/* Animated stage visuals — shown once audio is playing */}
       {status === 'playing' && <StageVisualizer audioRef={audioRef} />}
 
-      {/* Hidden audio element — audio plays through browser output */}}
+      {/* Hidden audio element — audio plays through browser output */}
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}

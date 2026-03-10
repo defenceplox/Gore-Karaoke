@@ -53,6 +53,12 @@ A self-hosted karaoke system that runs entirely on your local network:
 launch.bat
 ```
 
+Optional mode override:
+```powershell
+.\launch.ps1 -Mode emulated   # force x64 Node emulation on ARM64
+.\launch.ps1 -Mode native     # force native Node
+```
+
 That's it. The launcher handles everything:
 
 - **Installs Node.js** via winget if missing (native ARM64 build on Snapdragon)
@@ -72,7 +78,7 @@ If you'd rather install things yourself:
 
 | Dependency | Install |
 |------------|---------|
-| Node.js LTS | https://nodejs.org — pick the **ARM64** installer on Snapdragon |
+| Node.js LTS | https://nodejs.org — pick the **ARM64** installer on Snapdragon (LTS recommended; avoid Current for easiest `better-sqlite3` setup) |
 | Python 3 | https://python.org |
 | pnpm | `npm install -g pnpm` |
 | yt-dlp | `winget install yt-dlp.yt-dlp` |
@@ -126,10 +132,12 @@ Both the Docker and native Windows paths support ARM64.
 
 ### Native Windows (Snapdragon X, Surface Pro X, etc.)
 
-The launcher auto-detects the ARM64 host and:
-- Requests the native ARM64 Node.js build from winget
-- Warns if Node is running under x64 emulation and gives the exact command to switch
-- Checks `better-sqlite3`'s compiled `.node` binary against Node's arch and forces a clean reinstall if they don't match
+The launcher auto-detects the ARM64 host and defaults to **emulated x64 Node mode** for better `better-sqlite3` compatibility across mixed x86/ARM setups. It will:
+- Download a portable x64 Node runtime into `%LOCALAPPDATA%\\GoreKaraoke\\launcher-cache` when needed
+- Use that runtime for install/build/start so native addons target x64 consistently
+- Keep native ARM64 mode available via `-Mode native`
+
+Use native mode only if you specifically want ARM64-native Node performance and have the full ARM build toolchain installed.
 
 `yt-dlp` has no native ARM64 Windows binary — the x64 build runs fine under Windows ARM64's x64 emulation layer.
 
@@ -208,7 +216,8 @@ The server prints your exact LAN URLs and the `/rootCA.pem` install link for eve
 
 - **Host browser cert warning** — Accept once on first run, or import the CA cert into Windows as described above.
 - **Phone cert install** — Required once per device. Re-install if certs were regenerated.
-- **`better-sqlite3` compilation** — If `pnpm install` fails for `better-sqlite3`, the prebuilt binary for your Node version may be missing. The launcher checks for Python and MSVC build tools. On ARM64, you need the **MSVC v143 ARM64 build tools** optional component from Visual Studio Build Tools 2022.
+- **`better-sqlite3` compilation** — If `pnpm install` fails for `better-sqlite3`, the prebuilt binary for your Node version may be missing. Emulated mode usually avoids this on ARM64. In native ARM64 mode, you need Python + the **MSVC v143 ARM64 build tools** optional component from Visual Studio Build Tools 2022.
+- **Node.js version drift** — Very new Node releases can lag on native prebuild availability. Emulated x64 mode is generally more forgiving for legacy/native addon ecosystems.
 - **WebRTC phone mics** — Require HTTPS. The server falls back to HTTP if cert generation fails (check write permissions on `certs/`). Also require `network_mode: host` in Docker on Linux for full LAN access — Docker Desktop on Windows/Mac uses a bridge that blocks WebRTC.
 - **yt-dlp on ARM64 Windows** — No native binary available; runs under x64 emulation. Works fine.
 

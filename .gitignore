@@ -32,6 +32,10 @@ Thumbs.db
 CHECKPOINT.md
 TODO.md
 
+# Local launcher/runtime cache
+.tools/
+.cache/
+
 # Docker (not needed for Windows launcher)
 Dockerfile
 docker-compose.yml
